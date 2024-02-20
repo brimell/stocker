@@ -1,0 +1,48 @@
+//@version=5
+strategy("Enhanced Sophisticated Strategy", shorttitle="ESS", overlay=true, pyramiding=0)
+
+// Indicator Parameters
+fastLength = input(12, title="MACD Fast Length")
+slowLength = input(26, title="MACD Slow Length")
+signalSmoothing = input(9, title="MACD Signal Smoothing")
+rsiLength = input(14, title="RSI Length")
+rsiOverbought = input(70, title="RSI Overbought Level")
+rsiOversold = input(30, title="RSI Oversold Level")
+bbLength = input(20, title="Bollinger Bands Length")
+bbStdDev = input(2, title="Bollinger Bands StdDev")
+amaLength = input(10, title="AMA Period")
+stochK = input(14, title="Stochastic %K")
+stochD = input(3, title="Stochastic %D")
+volumeMultiplier = input(1.5, title="Volume Multiplier")
+atrLength = input(14, title="ATR Length")
+atrMultiplier = input(3.0, title="ATR Multiplier for Trailing Stop")
+
+// Indicators
+[macdLine, signalLine, _] = ta.macd(close, fastLength, slowLength, signalSmoothing)
+rsi = ta.rsi(close, rsiLength)
+[bbUpper, _, bbLower] = ta.bb(close, bbLength, bbStdDev)
+ama = ta.ama(close, amaLength)
+[stochKLine, stochDLine] = ta.stoch(high, low, close, stochK, stochD)
+avgVolume = ta.sma(volume, bbLength)
+atr = ta.atr(atrLength)
+
+// Conditions
+isUptrend = close > ama
+isDowntrend = close < ama
+volumeFilter = volume > avgVolume * volumeMultiplier
+longCondition = ta.crossover(macdLine, signalLine) and rsi > rsiOversold and close > bbLower and isUptrend and volumeFilter and stochKLine > stochDLine
+shortCondition = ta.crossunder(macdLine, signalLine) and rsi < rsiOverbought and close < bbUpper and isDowntrend and volumeFilter and stochKLine < stochDLine
+
+// Entries
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+    strategy.exit("Long TP/SL", "Long", stop=close-atr*atrMultiplier, limit=close+atr*atrMultiplier*2)
+
+if (shortCondition)
+    strategy.entry("Short", strategy.short)
+    strategy.exit("Short TP/SL", "Short", stop=close+atr*atrMultiplier, limit=close-atr*atrMultiplier*2)
+
+// Plot
+plot(ama, color=color.blue, title="AMA")
+hline(rsiOverbought, "Overbought", color=color.red)
+hline(rsiOversold, "Oversold", color=color.green)
