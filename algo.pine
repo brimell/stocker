@@ -10,9 +10,9 @@ rsiOverbought = input(70, title="RSI Overbought Level")
 rsiOversold = input(30, title="RSI Oversold Level")
 bbLength = input(20, title="Bollinger Bands Length")
 bbStdDev = input(2, title="Bollinger Bands StdDev")
-amaLength = input(10, title="AMA Period")
-stochK = input(14, title="Stochastic %K")
-stochD = input(3, title="Stochastic %D")
+emaLength = input(10, title="EMA Period")
+stochKLength = input(14, title="Stochastic %K")
+stochDLength = input(3, title="Stochastic %D Smoothing")
 volumeMultiplier = input(1.5, title="Volume Multiplier")
 atrLength = input(14, title="ATR Length")
 atrMultiplier = input(3.0, title="ATR Multiplier for Trailing Stop")
@@ -21,14 +21,15 @@ atrMultiplier = input(3.0, title="ATR Multiplier for Trailing Stop")
 [macdLine, signalLine, _] = ta.macd(close, fastLength, slowLength, signalSmoothing)
 rsi = ta.rsi(close, rsiLength)
 [bbUpper, _, bbLower] = ta.bb(close, bbLength, bbStdDev)
-ama = ta.ama(close, amaLength)
-[stochKLine, stochDLine] = ta.stoch(high, low, close, stochK, stochD)
+ema = ta.ema(close, emaLength)
+stochKLine = ta.stoch(close, high, low, stochKLength)
+stochDLine = ta.sma(stochKLine, stochDLength)
 avgVolume = ta.sma(volume, bbLength)
 atr = ta.atr(atrLength)
 
 // Conditions
-isUptrend = close > ama
-isDowntrend = close < ama
+isUptrend = close > ema
+isDowntrend = close < ema
 volumeFilter = volume > avgVolume * volumeMultiplier
 longCondition = ta.crossover(macdLine, signalLine) and rsi > rsiOversold and close > bbLower and isUptrend and volumeFilter and stochKLine > stochDLine
 shortCondition = ta.crossunder(macdLine, signalLine) and rsi < rsiOverbought and close < bbUpper and isDowntrend and volumeFilter and stochKLine < stochDLine
@@ -43,6 +44,6 @@ if (shortCondition)
     strategy.exit("Short TP/SL", "Short", stop=close+atr*atrMultiplier, limit=close-atr*atrMultiplier*2)
 
 // Plot
-plot(ama, color=color.blue, title="AMA")
+plot(ema, color=color.blue, title="EMA")
 hline(rsiOverbought, "Overbought", color=color.red)
 hline(rsiOversold, "Oversold", color=color.green)
